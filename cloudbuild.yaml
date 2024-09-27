@@ -1,0 +1,44 @@
+#  gcloud builds submit --config=cloudbuild.yaml .
+
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'australia-southeast2-docker.pkg.dev/binanceapp-333f1/server-repo/strengther-app:latest', '.']
+
+  # Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'australia-southeast2-docker.pkg.dev/binanceapp-333f1/server-repo/strengther-app:latest']
+
+  # Update the Compute Engine instance
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+    - 'compute'
+    - 'instances'
+    - 'update-container'
+    - 'top-pair-server'
+    - '--container-image'
+    - 'australia-southeast2-docker.pkg.dev/binanceapp-333f1/server-repo/strengther-app:latest'
+    - '--zone'
+    - 'australia-southeast2-b'
+
+  # Add startup script to instance metadata
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+    - 'compute'
+    - 'instances'
+    - 'add-metadata'
+    - 'top-pair-server'
+    - '--metadata-from-file'
+    - 'startup-script=startup-script.sh'
+    - '--zone'
+    - 'australia-southeast2-b'
+
+  # Check instance status and reset if possible
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+    - './check_and_reset.sh'
+
+images:
+- 'australia-southeast2-docker.pkg.dev/binanceapp-333f1/server-repo/strengther-app:latest'
+

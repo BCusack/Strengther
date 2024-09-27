@@ -12,7 +12,6 @@ ENV/
 
 # Poetry
 .poetry/
-poetry.lock
 
 # Streamlit
 .streamlit/
