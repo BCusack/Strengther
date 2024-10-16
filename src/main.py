@@ -2,6 +2,7 @@ from pybit.unified_trading import HTTP
 from typing import Dict, List
 import os
 from datetime import datetime
+from time import sleep
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -83,6 +84,7 @@ def process_symbol(symbol) -> SymbolData | None:
         )
     except Exception as e:
         print(f"Error processing {symbol}: {str(e)}")
+        sleep(1)
         return None
 
 async def get_perpetual_futures_daily_data() -> List[SymbolData]:
