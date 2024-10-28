@@ -22,7 +22,7 @@ async def background_task():
             await asyncio.sleep(1)  # Wait for the remainder of the hour
         except Exception as e:
             print(f"{Fore.RED}{time.strftime('%Y-%m-%d %H:%M:%S')} - ERROR - Error in background task: {str(e)}{Style.RESET_ALL}")
-            await asyncio.sleep(3600)  # Wait for an hour before retrying
+            await asyncio.sleep(5)  # Wait for an hour before retrying
 
 def run_background_task():
     asyncio.run(background_task())

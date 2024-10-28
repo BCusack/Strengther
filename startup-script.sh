@@ -11,5 +11,8 @@ sudo docker pull ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NA
 sudo docker stop fastapi-app || true
 sudo docker rm fastapi-app || true
 
+sudo docker stop klt-top-pair-server-hqjl || true
+sudo docker rm klt-top-pair-server-hqjl || true
+
 # Run the new container
 sudo docker run -d --name fastapi-app -p 80:8000 ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:latest

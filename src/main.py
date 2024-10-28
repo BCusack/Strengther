@@ -1,3 +1,4 @@
+import random
 from pybit.unified_trading import HTTP
 from typing import Dict, List
 import os
@@ -14,8 +15,8 @@ import pytz
 
 
 # Initialize the HTTP client
-api_key = os.getenv("BYBIT_API_KEY")
-api_secret = os.getenv("BYBIT_API_SECRET")
+api_key = "S0LVZJkjNAtKUhjkcJ"
+api_secret = "xVLxQRudWZB82c9spyBDc8L92njzLxVFASjk"
 client = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 
 init(autoreset=True)
@@ -49,43 +50,53 @@ price_cache = PriceCache()
 
 
 def process_symbol(symbol) -> SymbolData | None:
-    try:
-        # Fetch the last two days of 1-day kline data
-        kline_data = client.get_kline(
-            symbol=symbol,
-            interval='D',  # 1-day interval
-            limit=2  # Last two days
-        )["result"]["list"]
-        
-        # Check if we have at least two days of data to calculate the change
-        if not kline_data or len(kline_data) < 2:
-            return None
-        
-        # Use the second last kline for the previous day's close price
-        previous_day_kline = kline_data[1]
-        previous_close_price = float(previous_day_kline[4])
-        
-        # Use the most recent kline for the current price
-        recent_kline = kline_data[0]
-        current_price = float(recent_kline[4])
-        
-        # Calculate the daily change
-        daily_change = ((current_price - previous_close_price) / previous_close_price) * 100
-        
-        # Create and return a SymbolData instance with the calculated daily change
-        return SymbolData(
-            symbol=symbol,
-            open=float(recent_kline[1]),
-            high=float(recent_kline[2]),
-            low=float(recent_kline[3]),
-            close=current_price,
-            last_updated=datetime.now(tz=pytz.utc),
-            daily_change=daily_change
-        )
-    except Exception as e:
-        print(f"Error processing {symbol}: {str(e)}")
-        sleep(1)
-        return None
+    max_retries = 5
+    base_sleep_time = 1  # Base sleep time in seconds
+    for attempt in range(max_retries):
+        try:
+            # Fetch the last two days of 1-day kline data
+            kline_data = client.get_kline(
+                symbol=symbol,
+                interval='D',  # 1-day interval
+                limit=2  # Last two days
+            )["result"]["list"]
+            
+            # Check if we have at least two days of data to calculate the change
+            if not kline_data or len(kline_data) < 2:
+                return None
+            
+            # Use the second last kline for the previous day's close price
+            previous_day_kline = kline_data[1]
+            previous_close_price = float(previous_day_kline[4])
+            
+            # Use the most recent kline for the current price
+            recent_kline = kline_data[0]
+            current_price = float(recent_kline[4])
+            
+            # Calculate the daily change
+            daily_change = ((current_price - previous_close_price) / previous_close_price) * 100
+            
+            # Create and return a SymbolData instance with the calculated daily change
+            return SymbolData(
+                symbol=symbol,
+                open=float(recent_kline[1]),
+                high=float(recent_kline[2]),
+                low=float(recent_kline[3]),
+                close=current_price,
+                last_updated=datetime.now(tz=pytz.utc),
+                daily_change=daily_change
+            )
+        except Exception as e:
+            print(f"Error processing {symbol}: {str(e)}")
+            if "rate limit" in str(e).lower():
+                # Implement exponential backoff
+                sleep_time = base_sleep_time * (2 ** attempt) + random.uniform(0, 1)
+                print(f"Rate limit hit. Retrying in {sleep_time:.2f} seconds...")
+                sleep(sleep_time)
+            else:
+                sleep(10)
+                print("Retrying in 10 seconds...")
+    return None
 
 async def get_perpetual_futures_daily_data() -> List[SymbolData]:
     instruments = client.get_instruments_info(category="linear")["result"]["list"]
