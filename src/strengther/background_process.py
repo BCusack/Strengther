@@ -1,7 +1,7 @@
 import asyncio
 import pandas as pd
-from src.main import  get_perpetual_futures_daily_data 
-from src.api import update_data
+from strengther.main import  get_perpetual_futures_daily_data 
+from strengther.api import update_data
 import time
 import logging
 from colorama import Fore, Style, init
@@ -19,10 +19,7 @@ async def background_task():
             update_data(df)
             duration = time.time() - start_time
             print(f"{Fore.BLUE}{time.strftime('%Y-%m-%d %H:%M:%S')} - INFO - Background task completed. Cycle duration: {duration:.2f} seconds{Style.RESET_ALL}")
-            await asyncio.sleep(1)  # Wait for the remainder of the hour
+            await asyncio.sleep(1)  # Wait before the next cycle
         except Exception as e:
             print(f"{Fore.RED}{time.strftime('%Y-%m-%d %H:%M:%S')} - ERROR - Error in background task: {str(e)}{Style.RESET_ALL}")
-            await asyncio.sleep(5)  # Wait for an hour before retrying
-
-def run_background_task():
-    asyncio.run(background_task())
+            await asyncio.sleep(5)  # Wait longer on error
