@@ -107,7 +107,6 @@ def process_symbol(symbol) -> SymbolChangeData | None:
     return None
 
 
-
 async def update_symbols():
     """
     Fetches all linear perpetual symbols ending in 'USDT' from the exchange
@@ -137,7 +136,7 @@ async def update_symbols():
             for instrument in instruments:
                 if instrument.get('symbol', '').endswith("USDT"):
                     temp_symbols.add(instrument['symbol'])
-        
+
         if temp_symbols:
             _symbols = temp_symbols
             logger.info(f"Successfully updated symbol list. Found {len(_symbols)} symbols.")
@@ -146,7 +145,8 @@ async def update_symbols():
 
     except Exception as e:
         logger.error(f"Failed to update symbol list: {e}")
-        
+
+
 def get_symbols() -> List[str]:
     """
     Returns the current list of available symbols, sorted alphabetically.
@@ -155,14 +155,14 @@ def get_symbols() -> List[str]:
 
 
 async def get_perpetual_futures_daily_data() -> List[SymbolChangeData]:
-    
+
     with ThreadPoolExecutor(max_workers=10) as executor:
         loop = asyncio.get_event_loop()
         tasks = [loop.run_in_executor(executor, process_symbol, symbol) for symbol in _symbols]
         results = await asyncio.gather(*tasks)
 
     _data = [r for r in results if r is not None]
-    _data.sort(key=lambda x: abs(x.daily_change), reverse=True)
+    _data.sort(key=lambda x: abs(x.change), reverse=True)
 
     return _data
 

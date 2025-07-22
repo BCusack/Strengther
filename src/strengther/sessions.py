@@ -1,5 +1,5 @@
 import logging
-from time import time
+from datetime import time
 from typing import Dict
 from pydantic import BaseModel, Field
 
@@ -9,6 +9,7 @@ from strengther.models import SessionInfo
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 logger = logging.getLogger(__name__)
+
 
 class SessionData(BaseModel):
     def __init__(self):

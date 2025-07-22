@@ -23,7 +23,7 @@ async def get_data():
 
 @router.get("/top", response_model=List[SymbolChangeData])
 async def get_top_symbols(n: int = Query(5, ge=1, le=100)):
-    return sorted(data_store, key=lambda x: abs(float(x.pva)), reverse=True)[:n]
+    return sorted(data_store, key=lambda x: abs(float(x.change)), reverse=True)[:n]
 
 
 @router.get("/health_check", response_model=str)
