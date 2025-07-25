@@ -21,7 +21,7 @@ async def background_task():
             update_data(df)
             duration = time.time() - start_time
             top_symbol = df.loc[df['change'].abs().idxmax()]
-            logger.info(f"{Fore.GREEN}Top symbol: {top_symbol['symbol']} | Change: {top_symbol['change']:.2f} | "
+            logger.info(f"{Fore.GREEN}Top Volume Change: {top_symbol['symbol']} | Volume Change: {top_symbol['change']:.2f}% | "
                         f"Open: {top_symbol['open']} | High: {top_symbol['high']} | "
                         f"Low: {top_symbol['low']} | Close: {top_symbol['close']} | "
                         f"Duration: {duration:.2f} seconds{Style.RESET_ALL}")

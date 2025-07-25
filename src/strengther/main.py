@@ -31,7 +31,7 @@ client = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 init(autoreset=True)
 
 
-class PriceCache:
+class VolumeCache:
     def __init__(self):
         self.cache: Dict[str, SymbolChangeData] = {}
         self.last_hour: int = datetime.now(tz=pytz.utc).hour
@@ -42,52 +42,66 @@ class PriceCache:
             self.last_hour = datetime.now(tz=pytz.utc).hour
         return self.cache.get(symbol)
 
-    def set(self, symbol: str, open_price: float):
+    def set(self, symbol: str, volume_change: float):
         self.cache[symbol] = SymbolChangeData(
             symbol=symbol,
-            open=open_price,
+            open=0,
             high=0,
             low=0,
             close=0,
             last_updated=datetime.now(tz=pytz.utc),
-            change=0
+            change=volume_change
         )
 
 
-price_cache = PriceCache()
+volume_cache = VolumeCache()
 
 
 def process_symbol(symbol) -> SymbolChangeData | None:
     max_retries = 5
     base_sleep_time = 1  # Base sleep time in seconds
+    total_period = 120
     for attempt in range(max_retries):
         try:
-            # Fetch the last two days of 1-day kline data
+            # Fetch the last minutes of 1-minute kline data for volume comparison
             kline_data = client.get_kline(
                 symbol=symbol,
                 interval='1',  # 1-minute interval
-                limit=60  # Last 60 periods
+                limit=total_period  # Last n periods (n recent + n prior)
             )["result"]["list"]
 
-            # Check if we have at least two periods of data to calculate the change
-            if not kline_data or len(kline_data) < 2:
+            # Check if we have at least n periods of data for volume comparison
+            if not kline_data or len(kline_data) < total_period:
                 return None
 
             # turn kline_data into a list of Klines
             kline_data = [Kline.from_list(kline) for kline in kline_data]
 
-            # Use the last kline for the previous period's close price
-            start_kline = kline_data[-1]
-            open_price = float(start_kline.open)
+            # Calculate volume change: ((sum last 60 min - sum prior 60 min) / sum prior 60 min) * 100
+            if len(kline_data) >= total_period:
+                # Get the last n minutes of volume (most recent)
+                last_volumes = [float(kline.volume) for kline in kline_data[0:total_period // 2]]
+                sum_last = sum(last_volumes)
 
-            # Use the most recent kline for the current price
+                # Get the prior n minutes of volume (n-30 periods ago)
+                prior_volumes = [float(kline.volume) for kline in kline_data[total_period // 2:total_period]]
+                sum_prior = sum(prior_volumes)
+
+                # Calculate volume percentage change
+                if sum_prior > 0:
+                    change = ((sum_last - sum_prior) / sum_prior) * 100
+                else:
+                    change = 0
+            else:
+                # Not enough data for n-period volume comparison
+                change = 0
+
+            # Use the most recent kline for current price data
             recent_kline = kline_data[0]
             current_price = float(recent_kline.close)
+            start_kline = kline_data[-1]
 
-            # Calculate the daily change
-            change = ((current_price - open_price) / open_price) * 100
-
-            # Create and return a SymbolData instance with the calculated daily change
+            # Create and return a SymbolData instance with the calculated volume change
             return SymbolChangeData(
                 symbol=symbol,
                 open=float(start_kline.open),
@@ -165,6 +179,7 @@ async def get_perpetual_futures_daily_data() -> List[SymbolChangeData]:
         results = await asyncio.gather(*tasks)
 
     _data = [r for r in results if r is not None]
+    # Sort by absolute volume change percentage (highest 60min vs 60min volume changes first)
     _data.sort(key=lambda x: abs(x.change), reverse=True)
 
     return _data
