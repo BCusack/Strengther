@@ -6,7 +6,7 @@ from time import sleep
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from strengther.models import SymbolChangeData
+from strengther.models import SymbolChangeData, Kline
 
 from colorama import init
 import pandas as pd
@@ -65,31 +65,34 @@ def process_symbol(symbol) -> SymbolChangeData | None:
             # Fetch the last two days of 1-day kline data
             kline_data = client.get_kline(
                 symbol=symbol,
-                interval='D',  # 1-day interval
-                limit=2  # Last two days
+                interval='1',  # 1-minute interval
+                limit=60  # Last 60 periods
             )["result"]["list"]
 
-            # Check if we have at least two days of data to calculate the change
+            # Check if we have at least two periods of data to calculate the change
             if not kline_data or len(kline_data) < 2:
                 return None
 
-            # Use the second last kline for the previous day's close price
-            previous_day_kline = kline_data[1]
-            previous_close_price = float(previous_day_kline[4])
+            # turn kline_data into a list of Klines
+            kline_data = [Kline.from_list(kline) for kline in kline_data]
+
+            # Use the last kline for the previous period's close price
+            start_kline = kline_data[-1]
+            open_price = float(start_kline.open)
 
             # Use the most recent kline for the current price
             recent_kline = kline_data[0]
-            current_price = float(recent_kline[4])
+            current_price = float(recent_kline.close)
 
             # Calculate the daily change
-            change = ((current_price - previous_close_price) / previous_close_price) * 100
+            change = ((current_price - open_price) / open_price) * 100
 
             # Create and return a SymbolData instance with the calculated daily change
             return SymbolChangeData(
                 symbol=symbol,
-                open=float(recent_kline[1]),
-                high=float(recent_kline[2]),
-                low=float(recent_kline[3]),
+                open=float(start_kline.open),
+                high=float(start_kline.high),
+                low=float(start_kline.low),
                 close=current_price,
                 last_updated=datetime.now(tz=pytz.utc),
                 change=change
