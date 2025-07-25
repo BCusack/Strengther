@@ -7,13 +7,13 @@
 ### Install
 
 ```bash
-poetry install
+uv sync
 ```
 
 ### Run
 
 ```bash
-poetry run python src/main.py
+uv run strengther
 ```
 
 
